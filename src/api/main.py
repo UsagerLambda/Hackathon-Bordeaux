@@ -53,9 +53,9 @@ app.add_middleware(
 
 # ── Montage des routers ─────────────────────────────────────────────────────
 
-app.include_router(cell.router)
-app.include_router(address.router)
-app.include_router(map.router)
+app.include_router(cell.router, prefix="/api")
+app.include_router(address.router, prefix="/api")
+app.include_router(map.router, prefix="/api")
 
 
 # ── Route santé ──────────────────────────────────────────────────────────────

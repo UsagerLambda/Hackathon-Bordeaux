@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 from src.api.data_loader import get_gdf
 
-router = APIRouter(prefix="/api", tags=["Carte"])
+router = APIRouter(tags=["Carte"])
 
 
 @router.get("/map")

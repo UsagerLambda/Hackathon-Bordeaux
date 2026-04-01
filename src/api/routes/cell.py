@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from src.api.data_loader import get_gdf
 from src.api.scoring import get_recommendations
 
-router = APIRouter(prefix="/api", tags=["Cellules"])
+router = APIRouter(tags=["Cellules"])
 
 # Colonnes de features brutes à exposer
 _FEATURE_COLS = [
@@ -28,9 +28,15 @@ def get_cell(cell_id: str):
     if match.empty:
         raise HTTPException(status_code=404, detail=f"Cellule '{cell_id}' introuvable.")
 
+    from src.api.poi_loader import get_nearest_refuges
+
     row = match.iloc[0]
     score = str(row["score"])
     cluster = int(row["cluster"])
+
+    # Calcul du centroïde pour trouver les refuges proches
+    centroid = row.geometry.centroid
+    nearest_refuges = get_nearest_refuges(centroid.y, centroid.x, limit=3)
 
     return {
         "cell_id": cell_id,
@@ -38,6 +44,7 @@ def get_cell(cell_id: str):
         "cluster": cluster,
         "features": {col: _convert(row[col]) for col in _FEATURE_COLS},
         "recommendations": get_recommendations(score, cluster),
+        "nearest_refuges": nearest_refuges,
     }
 
 
