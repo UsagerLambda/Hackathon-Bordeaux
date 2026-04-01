@@ -13,8 +13,8 @@ router = APIRouter(tags=["Cellules"])
 # Colonnes de features brutes à exposer
 _FEATURE_COLS = [
     "flood_score", "nappe", "argile", "icu",
-    "in_pprt", "green_spaces", "water_infiltration",
-    "dist_industrie", "dist_sites_pol",
+    "in_pprt", "green_cover", "zone_humide", "water_infiltration",
+    "dist_industrie", "dist_sites_pol", "population",
 ]
 
 
@@ -33,17 +33,29 @@ def get_cell(cell_id: str):
     row = match.iloc[0]
     score = str(row["score"])
     cluster = int(row["cluster"])
+    cluster_label = str(row.get("cluster_label", f"Cluster {cluster}"))
 
     # Calcul du centroïde pour trouver les refuges proches
     centroid = row.geometry.centroid
     nearest_refuges = get_nearest_refuges(centroid.y, centroid.x, limit=3)
 
+    # Recommandations dynamiques + conseils du collègue
+    recommendations = get_recommendations(score, cluster)
+    colleague_advice = str(row.get("conseils_particulier", ""))
+    if colleague_advice and colleague_advice != "nan":
+        recommendations.insert(0, colleague_advice)
+
     return {
         "cell_id": cell_id,
         "score": score,
-        "cluster": cluster,
-        "features": {col: _convert(row[col]) for col in _FEATURE_COLS},
-        "recommendations": get_recommendations(score, cluster),
+        "cluster": {
+            "id": cluster,
+            "label": cluster_label
+        },
+        "population": int(row.get("population", 0)),
+        "explication": str(row.get("explication_particulier", "")),
+        "features": {col: _convert(row[col]) for col in _FEATURE_COLS if col in row},
+        "recommendations": recommendations,
         "nearest_refuges": nearest_refuges,
     }
 

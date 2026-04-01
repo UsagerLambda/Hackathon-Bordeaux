@@ -23,9 +23,9 @@ def get_map():
     # Colonnes à inclure dans le GeoJSON de sortie
     cols_to_export = [
         "cell_id", "flood_score", "nappe", "argile", "icu",
-        "in_pprt", "green_spaces", "water_infiltration",
-        "dist_industrie", "dist_sites_pol",
-        "cluster", "score", "geometry",
+        "in_pprt", "green_cover", "zone_humide", "water_infiltration",
+        "dist_industrie", "dist_sites_pol", "population",
+        "cluster", "cluster_label", "score", "score_particulier", "geometry",
     ]
 
     # Ne garder que les colonnes existantes

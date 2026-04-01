@@ -19,13 +19,13 @@ from sklearn.preprocessing import MinMaxScaler
 # ── Colonnes utilisées pour le scoring ──────────────────────────────────────
 
 # Features « risque » : plus c'est haut, plus c'est mauvais
-RISK_COLS = ["flood_score", "nappe", "argile", "icu_transformed", "in_pprt"]
+RISK_COLS = ["flood_score", "nappe", "argile", "icu_transformed", "in_pprt", "zone_humide"]
 
 # Features « capacité » : plus c'est loin, mieux c'est (on les inversera)
 CAPACITY_COLS = ["dist_industrie", "dist_sites_pol"]
 
 # Features « résilience » : plus c'est haut, mieux c'est (on les inversera)
-RESILIENCE_COLS = ["green_spaces", "water_infiltration"]
+RESILIENCE_COLS = ["green_cover", "water_infiltration"]
 
 # Poids relatifs par catégorie (ajustables)
 WEIGHT_RISK = 0.50

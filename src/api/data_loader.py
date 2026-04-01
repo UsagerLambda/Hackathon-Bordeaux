@@ -8,7 +8,7 @@ from typing import Optional
 import geopandas as gpd
 
 # Chemin vers le fichier GeoJSON (à la racine du repo)
-_GEOJSON_PATH = Path(__file__).resolve().parents[2] / "kmeans_clusters.geojson"
+_GEOJSON_PATH = Path(__file__).resolve().parents[2] / "scores.geojson"
 
 # GeoDataFrame global – alimenté au démarrage par load_data()
 gdf: Optional[gpd.GeoDataFrame] = None
@@ -24,7 +24,7 @@ def load_data() -> gpd.GeoDataFrame:
     if not _GEOJSON_PATH.exists():
         raise FileNotFoundError(
             f"Fichier GeoJSON introuvable : {_GEOJSON_PATH}\n"
-            "Place kmeans_clusters.geojson à la racine du repo."
+            "Place scores.geojson à la racine du repo."
         )
 
     gdf = gpd.read_file(_GEOJSON_PATH)
