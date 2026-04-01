@@ -1,0 +1,15 @@
+[project]
+name = "hackathon-bordeaux"
+version = "0.1.0"
+description = "Resili-Score — pipeline de données géospatiales Bordeaux Métropole"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx",
+    "geopandas",
+    "shapely",
+    "jupyter",
+    "seaborn"
+]
+
+[project.optional-dependencies]
+dxf = ["ezdxf"]
