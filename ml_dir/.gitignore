@@ -10,3 +10,4 @@ __pycache__
 *.qix
 *.csv
 *.cpg
+.DS_Store

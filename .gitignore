@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Data files (large)
+*.geojson
+*.dbf
+*.shx
+*.shp
+*.prj
+*.qix
+*.csv
+*.cpg
+
+# Notebooks
+*.ipynb
+
+# Lock files
+*.lock
+uv.lock
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
