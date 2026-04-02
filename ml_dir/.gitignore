@@ -1,0 +1,13 @@
+*.lock
+*.ipynb
+.venv
+__pycache__
+*.geojson
+*.dbf
+*.shx
+*.shp
+*.prj
+*.qix
+*.csv
+*.cpg
+.DS_Store
