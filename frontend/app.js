@@ -51,7 +51,7 @@ function initMap() {
     map.on('load', () => {
         console.log('✅ Carte chargée');
         
-        fetch('http://localhost:8000/api/map')
+        fetch('http://localhost:9456/api/map')
             .then(response => {
                 if (!response.ok) throw new Error(`Erreur: ${response.status}`);
                 return response.json();
@@ -114,7 +114,7 @@ function initMap() {
             })
             .catch(err => {
                 console.error('❌ Erreur chargement backend:', err);
-                alert('❌ Erreur: impossible de charger les données. Vérifiez que l\'API tourne sur http://localhost:8000');
+                alert('❌ Erreur: impossible de charger les données. Vérifiez que l\'API tourne sur http://localhost:9456');
             });
     });
 
@@ -279,7 +279,7 @@ function handleSearch(event) {
     const searchTerm = document.getElementById('search-input').value.trim();
     if (!searchTerm) return;
 
-    fetch(`http://localhost:8000/api/address?q=${encodeURIComponent(searchTerm)}`)
+    fetch(`http://localhost:9456/api/address?q=${encodeURIComponent(searchTerm)}`)
         .then(response => {
             if (!response.ok) throw new Error('Adresse introuvable');
             return response.json();

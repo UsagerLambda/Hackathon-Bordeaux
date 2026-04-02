@@ -2,11 +2,6 @@
   "version": 8,
   "name": "Satellite",
   "sources": {
-    "raster-tiles": {
-      "type": "raster",
-      "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-      "tileSize": 256
-    },
     "satellite": {
       "type": "raster",
       "tiles": [
