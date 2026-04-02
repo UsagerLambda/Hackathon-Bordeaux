@@ -74,10 +74,23 @@ def get_cell(cell_id: str):
                     
                 distance = round(match_row["distance_exacte"], 1)
                 
+                # Extraire lat/lon de l'industrie (la géométrie est dans gdf_ind, match_row contient index_right)
+                lat, lon = None, None
+                if "index_right" in match_row:
+                    idx_right = match_row["index_right"]
+                    ind_geom_2154 = gdf_ind.loc[idx_right, "geometry"]
+                    if ind_geom_2154 is not None:
+                        # Convertir le point 2154 vers 4326 pour avoir GPS
+                        ind_geom_4326 = gpd.GeoSeries([ind_geom_2154], crs="EPSG:2154").to_crs(epsg=4326).iloc[0]
+                        lat = round(float(ind_geom_4326.y), 6)
+                        lon = round(float(ind_geom_4326.x), 6)
+                
                 nearby_industrial_sites.append({
                     "nom": str(nom),
                     "type_risque": str(type_r),
-                    "distance_m": distance
+                    "distance_m": distance,
+                    "lat": lat,
+                    "lon": lon
                 })
                 
             # Trier la liste par distance croissante
@@ -96,7 +109,9 @@ def get_cell(cell_id: str):
                 nearby_industrial_sites.append({
                     "nom": "Établissement Industriel",
                     "type_risque": "Industriel (non précisé)",
-                    "distance_m": round(dist_ind, 1)
+                    "distance_m": round(dist_ind, 1),
+                    "lat": None,
+                    "lon": None
                 })
         except:
             pass
@@ -107,7 +122,9 @@ def get_cell(cell_id: str):
                 nearby_industrial_sites.append({
                     "nom": "Site Pollué",
                     "type_risque": "Pollution / Sol",
-                    "distance_m": round(dist_pol, 1)
+                    "distance_m": round(dist_pol, 1),
+                    "lat": None,
+                    "lon": None
                 })
         except:
             pass
