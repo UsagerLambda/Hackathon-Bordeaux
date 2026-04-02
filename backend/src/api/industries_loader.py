@@ -8,9 +8,14 @@ import pandas as pd
 from pathlib import Path
 
 # Chemins pour les données industrielles
-# parents[3] correspond à la racine absolue du projet Hackathon-Bordeaux
-_GEOJSON_ETAB_PATH = Path(__file__).resolve().parents[3] / "ri_etab_pol_p.geojson"
-_GEOJSON_BASOL_PATH = Path(__file__).resolve().parents[3] / "ri_basol_p.geojson"
+_GEOJSON_ETAB_PATH = Path("/Users/lucasscianna/Desktop/ri_etab_pol_p.geojson")
+_GEOJSON_BASOL_PATH = Path("/Users/lucasscianna/Desktop/ri_basol_p.geojson")
+
+# Fallback si jamais les fichiers sont quand même à la racine du projet
+if not _GEOJSON_ETAB_PATH.exists():
+    _GEOJSON_ETAB_PATH = Path(__file__).resolve().parents[3] / "ri_etab_pol_p.geojson"
+if not _GEOJSON_BASOL_PATH.exists():
+    _GEOJSON_BASOL_PATH = Path(__file__).resolve().parents[3] / "ri_basol_p.geojson"
 
 gdf_industries = None
 
