@@ -6,8 +6,8 @@
     <title>Cartorisk - Résilience Urbaine Bordeaux</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
-    <link href='./node_modules/maplibre-gl/dist/maplibre-gl.css' rel='stylesheet' />
-    <script src='./node_modules/maplibre-gl/dist/maplibre-gl.js'></script>
+    <link href='../node_modules/maplibre-gl/dist/maplibre-gl.css' rel='stylesheet' />
+    <script src='../node_modules/maplibre-gl/dist/maplibre-gl.js'></script>
     <header>
         <a href="./" class="logo-link">
             <img src="./images/Group 37229.png" alt="CART ORISK" class="logo">
@@ -15,20 +15,17 @@
     </header>
 </head>
 <body>
-    <!-- Barre de recherche centrée -->
     <form action="" method="GET" onsubmit="handleSearch(event)">
         <div class="search-bar">
-            <input type="text" id="search-input" placeholder="Chercher une adresse...">
+            <input type="text" id="search-input" placeholder="Chercher une adresse..." onchange="searchAddress()">
             <div class="search-icon" onclick="handleSearch(event)">
                 <i class="fas fa-magnifying-glass"></i>
             </div>
         </div>
     </form>
     
-    <!-- Carte interactive -->
     <div id="map"></div>
     
-    <!-- Popup d'informations (bas gauche) -->
     <div id="info-card">
         <div class="info-card-header">
             <h2 id="info-title">Informations</h2>
@@ -41,7 +38,7 @@
         </div>
     </div>
     
-    <!-- Légende avec 7 niveaux de résilience -->
     <script src="app.js"></script>
 </body>
+
 </html>
