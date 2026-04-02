@@ -4,58 +4,69 @@ pour la recherche de proximité via la route /api/cell/{cell_id}.
 """
 
 import geopandas as gpd
+import pandas as pd
 from pathlib import Path
 
-# Chemins possibles pour les données industrielles (à la racine du repo)
-_GEOJSON_PATH = Path(__file__).resolve().parents[2] / "industries.geojson"
-_DWG_ETAB_PATH = Path(__file__).resolve().parents[2] / "RI_ETAB_POL_P.dwg"
-_DWG_BASOL_PATH = Path(__file__).resolve().parents[2] / "RI_BASOL_P.dwg"
+# Chemins pour les données industrielles
+# parents[3] correspond à la racine absolue du projet Hackathon-Bordeaux
+_GEOJSON_ETAB_PATH = Path(__file__).resolve().parents[3] / "ri_etab_pol_p.geojson"
+_GEOJSON_BASOL_PATH = Path(__file__).resolve().parents[3] / "ri_basol_p.geojson"
 
 gdf_industries = None
 
 def load_industries() -> gpd.GeoDataFrame:
-    """Charge les données industrielles en mémoire et prépare l'index spatial."""
+    """Charge les données industrielles et BASOL en mémoire et prépare l'index spatial."""
     global gdf_industries
-    
-    path_to_load = None
-    if _GEOJSON_PATH.exists():
-        path_to_load = _GEOJSON_PATH
-    elif _DWG_ETAB_PATH.exists():
-        path_to_load = _DWG_ETAB_PATH
-    elif _DWG_BASOL_PATH.exists():
-        path_to_load = _DWG_BASOL_PATH
-        
-    if path_to_load:
+    gdfs = []
+
+    # 1. Chargement des établissements industriels (ETAB)
+    if _GEOJSON_ETAB_PATH.exists():
         try:
-            print(f"⚙️ Chargement des sites industriels depuis {path_to_load}...")
-            gdf_industries = gpd.read_file(path_to_load)
-            
-            # Si le CRS n'est pas défini, on présume 4326 par défaut, excepté pour les DWG qui 
-            # pourraient déjà être projetés. Geopandas lira le CRS s'il est dispo.
-            if gdf_industries.crs is None:
-                gdf_industries = gdf_industries.set_crs(epsg=4326)
-                
-            # On projette en EPSG:2154 (Lambert 93) pour avoir des distances en mètres
-            if gdf_industries.crs.to_epsg() != 2154:
-                gdf_industries = gdf_industries.to_crs(epsg=2154)
-                
-            # Forcer la création de l'index spatial (sindex) pour optimiser les calculs
-            _ = gdf_industries.sindex
-            print(f"✅ Données industrielles chargées : {len(gdf_industries)} établissements (index spatial prêt)")
-            
+            print(f"⚙️ Chargement des sites industriels depuis {_GEOJSON_ETAB_PATH.name}...")
+            gdf_etab = gpd.read_file(_GEOJSON_ETAB_PATH)
+            # Uniformisation des colonnes
+            if "libelle" in gdf_etab.columns:
+                gdf_etab["nom"] = gdf_etab["libelle"]
+            gdf_etab["type_risque"] = "Établissement Industriel"
+            gdfs.append(gdf_etab[["nom", "type_risque", "geometry"]])
         except Exception as e:
-            print(f"⚠️ Erreur lors du chargement des industries ({path_to_load}) : {e}")
-            gdf_industries = gpd.GeoDataFrame(columns=["nom", "type_risque", "geometry"], crs="EPSG:2154")
+            print(f"⚠️ Erreur lors du chargement de {_GEOJSON_ETAB_PATH.name}: {e}")
+
+    # 2. Chargement des sites pollués (BASOL)
+    if _GEOJSON_BASOL_PATH.exists():
+        try:
+            print(f"⚙️ Chargement des sites pollués depuis {_GEOJSON_BASOL_PATH.name}...")
+            gdf_basol = gpd.read_file(_GEOJSON_BASOL_PATH)
+            if "libelle" in gdf_basol.columns:
+                gdf_basol["nom"] = gdf_basol["libelle"]
+            gdf_basol["type_risque"] = "Site Pollué (BASOL)"
+            gdfs.append(gdf_basol[["nom", "type_risque", "geometry"]])
+        except Exception as e:
+            print(f"⚠️ Erreur lors du chargement de {_GEOJSON_BASOL_PATH.name}: {e}")
+
+    # 3. Fusion et Indexation Spatiale
+    if gdfs:
+        gdf_industries = pd.concat(gdfs, ignore_index=True)
+        # Reconvertir en GeoDataFrame après le concat de Pandas
+        gdf_industries = gpd.GeoDataFrame(gdf_industries, crs=gdfs[0].crs)
+        
+        # S'assurer d'être en Lambert 93 (2154) pour calculer en mètres
+        if gdf_industries.crs is None:
+            gdf_industries = gdf_industries.set_crs(epsg=4326)
+        if gdf_industries.crs.to_epsg() != 2154:
+            gdf_industries = gdf_industries.to_crs(epsg=2154)
+            
+        print(f"✅ Données concaténées : {len(gdf_industries)} sites (index spatial prêt)")
     else:
-        print("⚠️ Aucun fichier de données industrielles trouvé. L'API renverra une liste vide.")
+        print("⚠️ Aucun fichier geojson d'industries trouvé. Données vides.")
         gdf_industries = gpd.GeoDataFrame(columns=["nom", "type_risque", "geometry"], crs="EPSG:2154")
 
-    # Création du spatial index pour l'empty DF aussi, pour éviter les erreurs
+    # Initialisation index spatial
     _ = gdf_industries.sindex
     return gdf_industries
 
 def get_gdf_industries() -> gpd.GeoDataFrame:
-    """Retourne le GeoDataFrame global des industries."""
+    """Retourne le GeoDataFrame global condensé des industries."""
     global gdf_industries
     if gdf_industries is None:
         load_industries()
