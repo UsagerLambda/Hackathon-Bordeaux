@@ -1,0 +1,6 @@
+⚙️ Chargement des sites industriels depuis ri_etab_pol_p.geojson...
+⚙️ Chargement des sites pollués depuis ri_basol_p.geojson...
+✅ Données concaténées : 696 sites (index spatial prêt)
+Total entries: 696
+Columns: ['nom', 'type_risque', 'geometry']
+Sample: [{'nom': 'DGA ESSAIS DE MISSILES - SITE GIRONDE', 'type_risque': 'Établissement Industriel'}, {'nom': 'ELECTRICITE DE FRANCE', 'type_risque': 'Établissement Industriel'}]

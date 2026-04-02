@@ -21,6 +21,11 @@ async def lifespan(app: FastAPI):
     print("🚀 Démarrage de l'API Résili-Score...")
     gdf = load_data()
     compute_scores(gdf)
+    
+    # Charger les données industrielles
+    from src.api.industries_loader import load_industries
+    load_industries()
+    
     print("🟢 API prête !")
 
     yield
