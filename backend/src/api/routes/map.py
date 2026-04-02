@@ -25,7 +25,9 @@ def get_map():
         "cell_id", "flood_score", "nappe", "argile", "icu",
         "in_pprt", "green_cover", "zone_humide", "water_infiltration",
         "dist_industrie", "dist_sites_pol", "population",
-        "cluster", "cluster_label", "score", "score_particulier", "geometry",
+        "cluster", "cluster_label", "score", "score_particulier", 
+        "explication_particulier", "conseils_particulier",  # ← Ajoute ça
+        "geometry",
     ]
 
     # Ne garder que les colonnes existantes
