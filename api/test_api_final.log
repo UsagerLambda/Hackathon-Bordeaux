@@ -1,0 +1,15 @@
+🚀 Démarrage de l'API Résili-Score...
+✅ GeoJSON chargé : 9624 cellules
+✅ Scores calculés – distribution : {'A': 1925, 'B': 1925, 'D': 1925, 'E': 1925, 'C': 1924}
+⚠️ Aucun fichier de données industrielles trouvé. L'API renverra une liste vide.
+🟢 API prête !
+Testing Health:
+{'status': 'ok', 'project': 'Résili-Score'}
+
+Testing Cell cell_0_55:
+Status Code: 200
+{
+  "cell_id": "cell_0_55",
+  "nearby_industrial_sites": []
+}
+🔴 Arrêt de l'API Résili-Score.

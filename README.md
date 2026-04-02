@@ -88,6 +88,27 @@ Un habitant de Bordeaux Métropole est potentiellement concerné par **5 types d
 
 ## Notre Solution
 
+**# Résili-Score API 🌍
+
+API compagnonne du projet Résili-Score (Hackathon Bordeaux Métropole).
+Elle permet d'interroger les scores de résilience par adresse ou par cellule.
+
+> [!NOTE]
+> Le code de l'API a été déplacé dans le dossier `api/` pour faciliter l'intégration.
+
+## 📁 Structure du projet
+
+- `api/` : Dossier contenant le backend (Python/FastAPI).
+- `src/` : Déplacé sous `api/src/`.
+- `main.py` : Déplacé sous `api/main.py`.
+
+## 🚀 Installation & Lancement
+
+```bash
+cd api
+uv run uvicorn src.api.main:app --reload --port 8000
+```
+
 **Résili-Score** attribue à chaque cellule de 200m × 200m de Bordeaux Métropole un **score de résilience de A à E**, calculé à partir de données ouvertes. En un regard, l'habitant comprend :
 
 - **Son niveau d'exposition** aux risques naturels et technologiques
