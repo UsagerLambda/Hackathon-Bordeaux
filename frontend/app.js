@@ -4,6 +4,7 @@ let refugeMarkers = [];
 let industrieMarkers = [];
 let zonePollueeMarkers = [];
 let activePopups = [];
+let currentPoiRequestId = 0;
 
 
 // =====================
@@ -55,6 +56,10 @@ function nettoyerMarkers() {
     industrieMarkers = [];
     zonePollueeMarkers = [];
     activePopups = [];
+    if (window.currentMarker) {
+        window.currentMarker.remove();
+        window.currentMarker = null;
+    }
 }
 
 // =====================
@@ -73,7 +78,7 @@ function initMap() {
         console.log('✅ Carte chargée');
 
         // Affiche l'overlay de chargement si besoin
-        fetch('http://127.0.0.1:8000/api/map')
+        fetch('http://127.0.0.1:9456/api/map')
             .then(response => {
                 if (!response.ok) throw new Error(`Erreur: ${response.status}`);
                 return response.json();
@@ -101,7 +106,7 @@ function initMap() {
                                 '#8B0000',
                                 10, '#05852b',
                                 18, '#bbf534',
-                                26, '#DF7103',
+                                26, '#dba339',
                                 41, '#C74811',
                                 56, '#7D0033',
                                 76, '#4C0035'
@@ -140,10 +145,15 @@ function initMap() {
                             );
 
                             displayLocationInfo(props);
+                            nettoyerMarkers();
 
-                            fetch(`http://localhost:8000/api/cell/${props.cell_id}`)
+                            const requestId = ++currentPoiRequestId;
+                            const clickCenter = [e.lngLat.lng, e.lngLat.lat];
+                            fetch(`http://localhost:9456/api/cell/${props.cell_id}`)
                                 .then(r => r.json())
-                                .then(data => afficherPOI(data))
+                                .then(data => {
+                                    if (requestId === currentPoiRequestId) afficherPOI(data, clickCenter);
+                                })
                                 .catch(err => console.error('Erreur POI:', err));
                         }
                     });
@@ -160,7 +170,7 @@ function initMap() {
                 })
                     .catch(err => {
                         console.error('❌ Erreur chargement backend:', err);
-                        alert('❌ Erreur: impossible de charger les données. Vérifiez que l\'API tourne sur http://localhost:8000');
+                        alert('❌ Erreur: impossible de charger les données. Vérifiez que l\'API tourne sur http://localhost:9456');
                     });
             });
 
@@ -325,23 +335,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const searchTerm = document.getElementById('search-input').value.trim();
         if (!searchTerm) return;
 
-        fetch(`http://127.0.0.1:8000/api/address?q=${encodeURIComponent(searchTerm)}`)
+        fetch(`http://127.0.0.1:9456/api/address?q=${encodeURIComponent(searchTerm)}`)
             .then(response => {
                 if (!response.ok) throw new Error('Adresse introuvable');
                 return response.json();
             })
             .then(data => {
                 const coords = [data.coordinates.lon, data.coordinates.lat];
-
-                if (window.currentMarker) {
-                    window.currentMarker.remove();
-                }
-
-                window.currentMarker = new maplibregl.Marker({ color: '#564caf' })
-                    .setLngLat(coords)
-                    .addTo(map);
-
-                map.flyTo({ center: coords, zoom: 16, duration: 1000 });
 
                 displayLocationInfo({
                     score_particulier: parseFloat(data.score),
@@ -350,8 +350,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     conseils_particulier: data.recommendations.join(' | '),
                     ...data.features
                 }, data.address);
-                
-                afficherPOI(data);
+
+                // Désélectionner la cellule active si elle existe
+                if (selectedFeatureId !== null) {
+                    map.setFeatureState(
+                        { source: 'kmeans', id: selectedFeatureId },
+                        { selected: false }
+                    );
+                    selectedFeatureId = null;
+                }
+
+                currentPoiRequestId++;
+                afficherPOI(data, coords);
+
+                // Placer le marqueur après afficherPOI (qui appelle nettoyerMarkers)
+                window.currentMarker = new maplibregl.Marker({ color: '#564caf' })
+                    .setLngLat(coords)
+                    .addTo(map);
             })
             .catch(err => {
                 console.error('Erreur recherche adresse:', err);
@@ -359,58 +374,85 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    function afficherPOI(data) {
+    function afficherPOI(data, center) {
         nettoyerMarkers();
+
+        // Inclure la cellule/adresse sélectionnée dans le calcul des bounds
+        const allCoords = center ? [center] : [];
+
         if (data.nearest_refuges) {
             data.nearest_refuges.forEach(refuge => {
-                const popup = new maplibregl.Popup({ offset: 25, closeButton: false, closeOnClick: false, className: 'hover-popup' })
-                    .setHTML(`
-                        <p><strong><i class="fas fa-person-shelter"></i> Point de refuge</strong></p>
-                        <p>${refuge.name}</p>
-                        <p>${refuge.address}</p>
-                        <p>${Math.round(refuge.distance_m)}m</p>
-                    `);
+                try {
+                    if (refuge.lat == null || refuge.lon == null) return;
+                    const popup = new maplibregl.Popup({ offset: 25, closeButton: false, closeOnClick: false, className: 'hover-popup' })
+                        .setHTML(`
+                            <p><strong><i class="fas fa-person-shelter"></i> Point de refuge</strong></p>
+                            <p>${refuge.name}</p>
+                            <p>${refuge.address}</p>
+                            <p>${Math.round(refuge.distance_m)}m</p>
+                        `);
 
-                const marker = new maplibregl.Marker({ color: '#1a9641' })
-                    .setLngLat([refuge.lon, refuge.lat])
-                    .addTo(map);
+                    const marker = new maplibregl.Marker({ color: '#1a9641' })
+                        .setLngLat([refuge.lon, refuge.lat])
+                        .addTo(map);
 
-                const el = marker.getElement();
-                el.addEventListener('mouseenter', () => popup.addTo(map).setLngLat([refuge.lon, refuge.lat]));
-                el.addEventListener('mouseleave', () => popup.remove());
+                    const el = marker.getElement();
+                    el.addEventListener('mouseenter', () => popup.addTo(map).setLngLat([refuge.lon, refuge.lat]));
+                    el.addEventListener('mouseleave', () => popup.remove());
 
-                activePopups.push(popup);
-                refugeMarkers.push(marker);
+                    activePopups.push(popup);
+                    refugeMarkers.push(marker);
+                    allCoords.push([refuge.lon, refuge.lat]);
+                } catch (err) {
+                    console.error('Erreur ajout refuge:', err);
+                }
             });
         }
 
         if (data.nearby_industrial_sites) {
             data.nearby_industrial_sites.forEach(site => {
-                if (!site.lat || !site.lon) return;
+                try {
+                    if (site.lat == null || site.lon == null) return;
 
-                const estPollue = site.type_risque.includes('Pollué') || site.type_risque.includes('BASOL');
-                const couleur = estPollue ? '#dba339' : '#C74811';
-                const icone = estPollue ? '<i class="fas fa-biohazard"></i> Zone polluée' : '<i class="fas fa-industry"></i> Site industriel';
-                const markersArray = estPollue ? zonePollueeMarkers : industrieMarkers;
+                    const typeRisque = site.type_risque || '';
+                    const estPollue = typeRisque.includes('Pollué') || typeRisque.includes('BASOL');
+                    const couleur = estPollue ? '#dba339' : '#C74811';
+                    const icone = estPollue ? '<i class="fas fa-biohazard"></i> Zone polluée' : '<i class="fas fa-industry"></i> Site industriel';
+                    const markersArray = estPollue ? zonePollueeMarkers : industrieMarkers;
 
-                const popup = new maplibregl.Popup({ offset: 25, closeButton: false, closeOnClick: false, className: 'hover-popup' })
-                    .setHTML(`
-                        <p><strong>${icone}</strong></p>
-                        <p>${site.nom}</p>
-                        <p>Type : ${site.type_risque}</p>
-                        <p>${Math.round(site.distance_m)}m</p>
-                    `);
+                    const popup = new maplibregl.Popup({ offset: 25, closeButton: false, closeOnClick: false, className: 'hover-popup' })
+                        .setHTML(`
+                            <p><strong>${icone}</strong></p>
+                            <p>${site.nom || 'Inconnu'}</p>
+                            <p>Type : ${typeRisque}</p>
+                            <p>${Math.round(site.distance_m)}m</p>
+                        `);
 
-                const marker = new maplibregl.Marker({ color: couleur })
-                    .setLngLat([site.lon, site.lat])
-                    .addTo(map);
-                
-                const el = marker.getElement();
-                el.addEventListener('mouseenter', () => popup.addTo(map).setLngLat([site.lon, site.lat]));
-                el.addEventListener('mouseleave', () => popup.remove());
+                    const marker = new maplibregl.Marker({ color: couleur })
+                        .setLngLat([site.lon, site.lat])
+                        .addTo(map);
 
-                activePopups.push(popup);
-                markersArray.push(marker);
+                    const el = marker.getElement();
+                    el.addEventListener('mouseenter', () => popup.addTo(map).setLngLat([site.lon, site.lat]));
+                    el.addEventListener('mouseleave', () => popup.remove());
+
+                    activePopups.push(popup);
+                    markersArray.push(marker);
+                    allCoords.push([site.lon, site.lat]);
+                } catch (err) {
+                    console.error('Erreur ajout site industriel:', err);
+                }
             });
+        }
+
+        // Ajuster la vue pour englober tous les marqueurs
+        if (allCoords.length > 0) {
+            const lons = allCoords.map(c => c[0]);
+            const lats = allCoords.map(c => c[1]);
+            const bounds = [
+                [Math.min(...lons), Math.min(...lats)],
+                [Math.max(...lons), Math.max(...lats)]
+            ];
+            map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 600 });
         }
     }
