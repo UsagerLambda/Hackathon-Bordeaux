@@ -8,9 +8,9 @@ import pandas as pd
 from pathlib import Path
 
 # Chemins pour les données industrielles
-# parents[3] correspond à la racine absolue du projet Hackathon-Bordeaux
-_GEOJSON_ETAB_PATH = Path(__file__).resolve().parents[3] / "ri_etab_pol_p.geojson"
-_GEOJSON_BASOL_PATH = Path(__file__).resolve().parents[3] / "ri_basol_p.geojson"
+# parents[2] correspond à la racine du backend
+_GEOJSON_ETAB_PATH = Path(__file__).resolve().parents[2] / "ri_etab_pol_p.geojson"
+_GEOJSON_BASOL_PATH = Path(__file__).resolve().parents[2] / "ri_basol_p.geojson"
 
 gdf_industries = None
 

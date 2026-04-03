@@ -82,6 +82,41 @@ async def search_address(q: str = Query(..., description="Adresse à rechercher"
     # Calcul des refuges proches de l'adresse géocodée
     nearest_refuges = get_nearest_refuges(lat, lon, limit=3)
 
+    # ---------- RECHERCHE DES 3 SITES INDUSTRIELS/POLLUÉS LES PLUS PROCHES ----------
+    import geopandas as gpd
+    from src.api.industries_loader import get_gdf_industries
+    
+    gdf_ind = get_gdf_industries()
+    nearby_industrial_sites = []
+    
+    if not gdf_ind.empty:
+        try:
+            addr_geom_2154 = gpd.GeoSeries([point], crs="EPSG:4326").to_crs("EPSG:2154").iloc[0]
+            distances = gdf_ind.distance(addr_geom_2154)
+            closest_indices = distances.nsmallest(3).index
+
+            for idx in closest_indices:
+                match_row = gdf_ind.loc[idx]
+                dist = distances.loc[idx]
+                
+                nom = match_row.get("nom", match_row.get("nom_etablissement", match_row.get("Name", "Inconnu")))
+                if str(nom) == "nan": nom = "Inconnu"
+
+                type_r = match_row.get("type_risque", match_row.get("pollution", "Non spécifié"))
+                if str(type_r) == "nan": type_r = "Non spécifié"
+
+                geom_wgs = gpd.GeoSeries([match_row.geometry], crs="EPSG:2154").to_crs("EPSG:4326").iloc[0]
+
+                nearby_industrial_sites.append({
+                    "nom": str(nom),
+                    "type_risque": str(type_r),
+                    "distance_m": round(dist, 1),
+                    "lat": geom_wgs.y,
+                    "lon": geom_wgs.x
+                })
+        except Exception as e:
+            print(f"Erreur lors du calcul de proximité des industries: {e}")
+
     # Recommandations dynamiques + conseils du collègue
     recommendations = get_recommendations(score, cluster)
     colleague_advice = str(row.get("conseils_particulier", ""))
@@ -102,6 +137,7 @@ async def search_address(q: str = Query(..., description="Adresse à rechercher"
         "features": {col: _convert(row[col]) for col in _FEATURE_COLS if col in row},
         "recommendations": recommendations,
         "nearest_refuges": nearest_refuges,
+        "nearby_industrial_sites": nearby_industrial_sites,
     }
 
 
