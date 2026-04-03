@@ -100,7 +100,7 @@ function initMap() {
                                 ['get', 'score_particulier'],
                                 '#8B0000',
                                 10, '#05852b',
-                                18, '#dba239ab',
+                                18, '#bbf534',
                                 26, '#DF7103',
                                 41, '#C74811',
                                 56, '#7D0033',
