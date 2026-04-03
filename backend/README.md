@@ -44,10 +44,10 @@ uv sync
 ## Lancement
 
 ```bash
-uvicorn src.api.main:app --reload --port 8000
+uvicorn src.api.main:app --reload --port 9456
 ```
 
-La documentation interactive (Swagger) est disponible sur `http://localhost:8000/docs`.
+La documentation interactive (Swagger) est disponible sur `http://localhost:9456/docs`.
 
 ## Endpoints
 
