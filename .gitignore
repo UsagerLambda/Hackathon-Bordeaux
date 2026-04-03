@@ -19,6 +19,7 @@ build/
 *.qix
 *.csv
 *.cpg
+*.pdf
 
 # Notebooks
 *.ipynb
