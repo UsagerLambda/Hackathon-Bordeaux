@@ -163,16 +163,33 @@ function initMap() {
                 map.on('click', 'kmeans-fill', (e) => {
                     if (e.features.length > 0) {
                         const props = e.features[0].properties;
-                        const score = props.score_particulier;
-                        const lettre = getLettre(score);
+                        const cellId = props.cell_id;
                         
-                        displayLocationInfo({
-                            address: props.cluster_label || 'Zone résidentielle',
-                            resilience: Math.round(score),
-                            risk: props.explication_particulier,
-                            district: `Cluster ${props.cluster}`,
-                            recommendations: props.conseils_particulier
-                        });
+                        console.log(`🔍 Clic sur cellule : ${cellId}`);
+                        
+                        // Appel au backend pour avoir les détails dynamiques (sites à proximité, etc.)
+                        fetch(`http://localhost:9456/api/cell/${cellId}`)
+                            .then(resp => resp.json())
+                            .then(data => {
+                                displayLocationInfo({
+                                    address: data.cluster.label || 'Zone résidentielle',
+                                    resilience: Math.round(data.score_num),
+                                    risk: data.explication,
+                                    recommendations: data.recommendations.join(' | '),
+                                    nearby_industrial_sites: data.nearby_industrial_sites,
+                                    nearest_refuges: data.nearest_refuges
+                                });
+                            })
+                            .catch(err => {
+                                console.error('Erreur API détails cellule:', err);
+                                // Fallback sur les données statiques si l'API échoue
+                                displayLocationInfo({
+                                    address: props.cluster_label || 'Zone résidentielle',
+                                    resilience: Math.round(props.score_particulier),
+                                    risk: props.explication_particulier,
+                                    recommendations: props.conseils_particulier
+                                });
+                            });
                     }
                 });
                 
@@ -291,6 +308,37 @@ function handleSearch(event) {
     }
 }
 
+/**
+ * Recherche une adresse via l'API locale (qui interroge la BAN)
+ * Retourne les données de résilience associées.
+ */
+async function rechercherAvecBAN(q) {
+    try {
+        console.log(`🌐 Recherche de l'adresse : ${q}`);
+        const response = await fetch(`http://localhost:9456/api/address?q=${encodeURIComponent(q)}`);
+        if (!response.ok) throw new Error("Adresse introuvable ou erreur API");
+        
+        const data = await response.json();
+        
+        // On formate l'objet pour qu'il soit compatible avec displayLocationInfo
+        return [{
+            address: data.address,
+            resilience: Math.round(data.score_num),
+            risk: data.explication,
+            recommendations: data.recommendations.join(' | '),
+            nearby_industrial_sites: data.nearby_industrial_sites,
+            nearest_refuges: data.nearest_refuges,
+            lat: data.coordinates.lat,
+            lng: data.coordinates.lon
+        }];
+    } catch (error) {
+        console.error("❌ Erreur de recherche :", error);
+        alert("Impossible de trouver cette adresse ou le serveur est hors ligne.");
+        return [];
+    }
+}
+
+
 function afficherResultats(resultats) {
     if (resultats.length === 0) return;
     
@@ -346,6 +394,30 @@ function displayLocationInfo(location) {
             <small style="color: #ddd; line-height: 1.6;">${location.risk || 'Non spécifié'}</small>
         </div>
     `;
+    
+    // Ajout des sites industriels proches
+    if (location.nearby_industrial_sites && location.nearby_industrial_sites.length > 0) {
+        bodyHTML += `
+        <div style="background: rgba(199, 72, 17, 0.1); padding: 0.75rem; border-radius: 4px; border-left: 3px solid #C74811; margin-bottom: 1rem;">
+            <strong style="color: #C74811;">🏭 Sites industriels / pollués:</strong><br>
+            <small style="color: #ddd; line-height: 1.6;">
+                ${location.nearby_industrial_sites.map(s => `• ${s.nom} (${s.distance_m}m)`).join('<br>')}
+            </small>
+        </div>
+        `;
+    }
+
+    // Ajout des points de refuge proches
+    if (location.nearest_refuges && location.nearest_refuges.length > 0) {
+        bodyHTML += `
+        <div style="background: rgba(5, 133, 43, 0.1); padding: 0.75rem; border-radius: 4px; border-left: 3px solid #05852b; margin-bottom: 1rem;">
+            <strong style="color: #05852b;">🚒 Points de refuge (gymnases):</strong><br>
+            <small style="color: #ddd; line-height: 1.6;">
+                ${location.nearest_refuges.map(r => `• ${r.name} (${r.distance_m}m)`).join('<br>')}
+            </small>
+        </div>
+        `;
+    }
     
     if (location.recommendations) {
         bodyHTML += `

@@ -3,19 +3,23 @@ industries_loader.py – Charge les sites industriels ou pollués
 pour la recherche de proximité via la route /api/cell/{cell_id}.
 """
 
+from typing import List, Dict
+from pathlib import Path
 import geopandas as gpd
 import pandas as pd
-from pathlib import Path
+from shapely.geometry import Point
 
 # Chemins pour les données industrielles
-_GEOJSON_ETAB_PATH = Path("/Users/lucasscianna/Desktop/ri_etab_pol_p.geojson")
-_GEOJSON_BASOL_PATH = Path("/Users/lucasscianna/Desktop/ri_basol_p.geojson")
+# Chemins pour les données industrielles
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
+_GEOJSON_ETAB_PATH = _BACKEND_DIR / "ri_etab_pol_p.geojson"
+_GEOJSON_BASOL_PATH = _BACKEND_DIR / "ri_basol_p.geojson"
 
-# Fallback si jamais les fichiers sont quand même à la racine du projet
+# Fallback si jamais les fichiers ont été copiés sur le Bureau
 if not _GEOJSON_ETAB_PATH.exists():
-    _GEOJSON_ETAB_PATH = Path(__file__).resolve().parents[3] / "ri_etab_pol_p.geojson"
+    _GEOJSON_ETAB_PATH = Path("/Users/lucasscianna/Desktop/ri_etab_pol_p.geojson")
 if not _GEOJSON_BASOL_PATH.exists():
-    _GEOJSON_BASOL_PATH = Path(__file__).resolve().parents[3] / "ri_basol_p.geojson"
+    _GEOJSON_BASOL_PATH = Path("/Users/lucasscianna/Desktop/ri_basol_p.geojson")
 
 gdf_industries = None
 
@@ -76,3 +80,39 @@ def get_gdf_industries() -> gpd.GeoDataFrame:
     if gdf_industries is None:
         load_industries()
     return gdf_industries
+
+def get_nearest_industries(lat: float, lon: float, limit: int = 3) -> List[Dict]:
+    """
+    Retourne les N sites industriels/pollués les plus proches d'un point (lat, lon).
+    Calcule en Lambert 93 (mètres) pour la précision.
+    """
+    gdf_ind = get_gdf_industries()
+    if gdf_ind.empty:
+        return []
+
+    # 1. Créer le point en WGS84 et projeter en Lambert 93 (EPSG:2154)
+    point_4326 = Point(lon, lat)
+    point_2154 = gpd.GeoSeries([point_4326], crs="EPSG:4326").to_crs(epsg=2154).iloc[0]
+
+    # 2. Calculer les distances pour tous les sites
+    temp_gdf = gdf_ind.copy()
+    temp_gdf["distance_m"] = temp_gdf.geometry.distance(point_2154)
+
+    # 3. Trier et prendre les N premiers
+    nearest = temp_gdf.sort_values("distance_m").head(limit)
+
+    # 4. Formater pour le JSON
+    results = []
+    for _, row in nearest.iterrows():
+        # Conversion de la géométrie Lambert 93 vers GPS 4326 pour le front
+        geom_4326 = gpd.GeoSeries([row.geometry], crs="EPSG:2154").to_crs(epsg=4326).iloc[0]
+        
+        results.append({
+            "nom": str(row.get("nom", "Inconnu")),
+            "type_risque": str(row.get("type_risque", "Non spécifié")),
+            "distance_m": round(float(row["distance_m"]), 1),
+            "lat": round(float(geom_4326.y), 6),
+            "lon": round(float(geom_4326.x), 6)
+        })
+
+    return results

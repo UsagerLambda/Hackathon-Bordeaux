@@ -82,6 +82,10 @@ async def search_address(q: str = Query(..., description="Adresse à rechercher"
     # Calcul des refuges proches de l'adresse géocodée
     nearest_refuges = get_nearest_refuges(lat, lon, limit=3)
 
+    # ---------- RECHERCHE DES 3 SITES INDUSTRIELS LES PLUS PROCHES ----------
+    from src.api.industries_loader import get_nearest_industries
+    nearby_industrial_sites = get_nearest_industries(lat, lon, limit=3)
+
     # Recommandations dynamiques + conseils du collègue
     recommendations = get_recommendations(score, cluster)
     colleague_advice = str(row.get("conseils_particulier", ""))
@@ -93,6 +97,7 @@ async def search_address(q: str = Query(..., description="Adresse à rechercher"
         "address": label,
         "coordinates": {"lat": lat, "lon": lon},
         "score": score,
+        "score_num": float(row.get("score_particulier", 50)),
         "cluster": {
             "id": cluster,
             "label": cluster_label
@@ -102,6 +107,7 @@ async def search_address(q: str = Query(..., description="Adresse à rechercher"
         "features": {col: _convert(row[col]) for col in _FEATURE_COLS if col in row},
         "recommendations": recommendations,
         "nearest_refuges": nearest_refuges,
+        "nearby_industrial_sites": nearby_industrial_sites,
     }
 
 

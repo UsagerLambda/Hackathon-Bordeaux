@@ -39,98 +39,36 @@ def get_cell(cell_id: str):
     centroid = row.geometry.centroid
     nearest_refuges = get_nearest_refuges(centroid.y, centroid.x, limit=3)
 
-    # ---------- RECHERCHE DES SITES INDUSTRIELS À PROXIMITÉ (< 250m) ----------
-    import geopandas as gpd
-    from src.api.industries_loader import get_gdf_industries
+    # ---------- RECHERCHE DES 3 SITES INDUSTRIELS LES PLUS PROCHES ----------
+    from src.api.industries_loader import get_nearest_industries
     
-    gdf_ind = get_gdf_industries()
-    nearby_industrial_sites = []
+    # Calcul avec les données chargées dynamiquement (ri_etab... et ri_basol...)
+    nearby_industrial_sites = get_nearest_industries(centroid.y, centroid.x, limit=3)
     
-    if not gdf_ind.empty:
-        # Créer un GeoDataFrame à partir du centroïde, projeté en EPSG:2154 (pour calcul en mètres)
-        cell_point_gdf = gpd.GeoDataFrame([{"geometry": centroid}], crs="EPSG:4326")
-        cell_point_gdf = cell_point_gdf.to_crs(epsg=2154)
-        
+    # Fallback : Si aucun site trouvé via les GeoJSON externes, on utilise les colonnes statiques
+    if not nearby_industrial_sites:
         try:
-            # sjoin_nearest utilise l'index spatial automatiquement
-            closest_industries = gpd.sjoin_nearest(
-                cell_point_gdf, 
-                gdf_ind, 
-                how="inner", 
-                max_distance=250.0, 
-                distance_col="distance_exacte"
-            )
-            
-            # Formater les résultats
-            for _, match_row in closest_industries.iterrows():
-                # On essaie plusieurs noms de colonnes probables
-                nom = match_row.get("nom", match_row.get("nom_etablissement", match_row.get("Name", "Inconnu")))
-                if str(nom) == "nan":
-                    nom = "Inconnu"
-                    
-                type_r = match_row.get("type_risque", match_row.get("pollution", "Non spécifié"))
-                if str(type_r) == "nan":
-                    type_r = "Non spécifié"
-                    
-                distance = round(match_row["distance_exacte"], 1)
-                
-                # Extraire lat/lon de l'industrie (la géométrie est dans gdf_ind, match_row contient index_right)
-                lat, lon = None, None
-                if "index_right" in match_row:
-                    idx_right = match_row["index_right"]
-                    ind_geom_2154 = gdf_ind.loc[idx_right, "geometry"]
-                    if ind_geom_2154 is not None:
-                        # Convertir le point 2154 vers 4326 pour avoir GPS
-                        ind_geom_4326 = gpd.GeoSeries([ind_geom_2154], crs="EPSG:2154").to_crs(epsg=4326).iloc[0]
-                        lat = round(float(ind_geom_4326.y), 6)
-                        lon = round(float(ind_geom_4326.x), 6)
-                
-                nearby_industrial_sites.append({
-                    "nom": str(nom),
-                    "type_risque": str(type_r),
-                    "distance_m": distance,
-                    "lat": lat,
-                    "lon": lon
-                })
-                
-            # Trier la liste par distance croissante
-            nearby_industrial_sites.sort(key=lambda x: x["distance_m"])
-            
-        except Exception as e:
-            print(f"Erreur lors du calcul de proximité des industries: {e}")
-
-    # Fallback (utilisation des données du GeoJSON pré-calculées 'dist_industrie' et 'dist_sites_pol')
-    # si le fichier d'industries externe n'est pas chargé et que les données y sont présentes.
-    import math
-    if gdf_ind.empty:
-        try:
+            import math
             dist_ind = float(row.get("dist_industrie", 9999))
-            if not math.isnan(dist_ind) and dist_ind < 250.0:
+            dist_pol = float(row.get("dist_sites_pol", 9999))
+            
+            if not math.isnan(dist_ind) and dist_ind < 5000: # Limite arbitraire pour le fallback
                 nearby_industrial_sites.append({
                     "nom": "Établissement Industriel",
                     "type_risque": "Industriel (non précisé)",
                     "distance_m": round(dist_ind, 1),
-                    "lat": None,
-                    "lon": None
+                    "lat": None, "lon": None
                 })
-        except:
-            pass
-            
-        try:
-            dist_pol = float(row.get("dist_sites_pol", 9999))
-            if not math.isnan(dist_pol) and dist_pol < 250.0:
+            if not math.isnan(dist_pol) and dist_pol < 5000:
                 nearby_industrial_sites.append({
                     "nom": "Site Pollué",
                     "type_risque": "Pollution / Sol",
                     "distance_m": round(dist_pol, 1),
-                    "lat": None,
-                    "lon": None
+                    "lat": None, "lon": None
                 })
+            nearby_industrial_sites.sort(key=lambda x: x["distance_m"])
         except:
             pass
-            
-        # Trier par distance (le fallback peut ajouter jusqu'à 2 sites)
-        nearby_industrial_sites.sort(key=lambda x: x["distance_m"])
 
     # Recommandations dynamiques + conseils du collègue
     recommendations = get_recommendations(score, cluster)
@@ -141,6 +79,7 @@ def get_cell(cell_id: str):
     return {
         "cell_id": cell_id,
         "score": score,
+        "score_num": float(row.get("score_particulier", 50)),
         "cluster": {
             "id": cluster,
             "label": cluster_label
