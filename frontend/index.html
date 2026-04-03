@@ -5,25 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cartorisk - Résilience Urbaine Bordeaux</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
-    <link href='../node_modules/maplibre-gl/dist/maplibre-gl.css' rel='stylesheet' />
-    <script src='../node_modules/maplibre-gl/dist/maplibre-gl.js'></script>
-    <header>
-        <a href="./" class="logo-link">
-            <img src="./images/Group 37229.png" alt="CART ORISK" class="logo">
-        </a>
-    </header>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href='https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css' rel='stylesheet' />
+    <script src='https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js'></script>
 </head>
 <body>
     <form action="" method="GET" onsubmit="handleSearch(event)">
         <div class="search-bar">
-            <input type="text" id="search-input" placeholder="Chercher une adresse..." onchange="searchAddress()">
+            <input type="text" id="search-input" placeholder="Chercher une adresse...">
             <div class="search-icon" onclick="handleSearch(event)">
                 <i class="fas fa-magnifying-glass"></i>
             </div>
         </div>
     </form>
     
+    <div id="info-legend">
+        <button class="info-legend-btn" aria-label="Légende">
+            <i class="fas fa-circle-info"></i>
+        </button>
+        <div class="info-legend-tooltip">
+            <h4>Échelle de résilience</h4>
+            <div class="legend-row"><span class="legend-swatch" style="background:#05852b"></span> <strong>A</strong> — Très résilient (10–17)</div>
+            <div class="legend-row"><span class="legend-swatch" style="background:#bbf534"></span> <strong>B</strong> — Résilient (18–25)</div>
+            <div class="legend-row"><span class="legend-swatch" style="background:#dba339"></span> <strong>C</strong> — Moyen (26–40)</div>
+            <div class="legend-row"><span class="legend-swatch" style="background:#C74811"></span> <strong>D</strong> — Fragile (41–55)</div>
+            <div class="legend-row"><span class="legend-swatch" style="background:#7D0033"></span> <strong>E</strong> — Très fragile (56–75)</div>
+            <div class="legend-row"><span class="legend-swatch" style="background:#4C0035"></span> <strong>F</strong> — Critique extrême (76+)</div>
+            <hr class="legend-divider">
+            <h4>Marqueurs sur la carte</h4>
+            <div class="legend-row"><span class="legend-pin" style="background:#1a9641"></span> Refuge le plus proche</div>
+            <div class="legend-row"><span class="legend-pin" style="background:#dba339"></span> Zone polluée la plus proche</div>
+            <div class="legend-row"><span class="legend-pin" style="background:#C74811"></span> Site industriel le plus proche</div>
+        </div>
+    </div>
+
     <div id="map"></div>
     
     <div id="info-card">
