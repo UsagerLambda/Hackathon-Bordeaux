@@ -41,42 +41,7 @@ def get_cell(cell_id: str):
 
     # ---------- RECHERCHE DES 3 SITES INDUSTRIELS LES PLUS PROCHES ----------
     from src.api.industries_loader import get_nearest_industries
-    
-    # Calcul avec les données chargées dynamiquement (ri_etab... et ri_basol...)
     nearby_industrial_sites = get_nearest_industries(centroid.y, centroid.x, limit=3)
-    
-    if not gdf_ind.empty:
-        try:
-            # Créer un Series géographique en EPSG:2154 (pour calcul en mètres)
-            cell_geom_2154 = gpd.GeoSeries([centroid], crs="EPSG:4326").to_crs("EPSG:2154").iloc[0]
-            
-            # Calcul de distance depuis ce point pour toutes les industries
-            distances = gdf_ind.distance(cell_geom_2154)
-            # On prend les 3 plus proches (peu importe la distance absolue)
-            closest_indices = distances.nsmallest(3).index
-
-            for idx in closest_indices:
-                match_row = gdf_ind.loc[idx]
-                dist = distances.loc[idx]
-                
-                nom = match_row.get("nom", match_row.get("nom_etablissement", match_row.get("Name", "Inconnu")))
-                if str(nom) == "nan": nom = "Inconnu"
-
-                type_r = match_row.get("type_risque", match_row.get("pollution", "Non spécifié"))
-                if str(type_r) == "nan": type_r = "Non spécifié"
-
-                # Convertir la géométrie de l'industrie en WGS84 pour récupérer lon/lat
-                geom_wgs = gpd.GeoSeries([match_row.geometry], crs="EPSG:2154").to_crs("EPSG:4326").iloc[0]
-
-                nearby_industrial_sites.append({
-                    "nom": str(nom),
-                    "type_risque": str(type_r),
-                    "distance_m": round(dist, 1),
-                    "lat": geom_wgs.y,
-                    "lon": geom_wgs.x
-                })
-        except Exception as e:
-            print(f"Erreur lors du calcul de proximité des industries: {e}")
 
     # Recommandations dynamiques + conseils du collègue
     recommendations = get_recommendations(score, cluster)

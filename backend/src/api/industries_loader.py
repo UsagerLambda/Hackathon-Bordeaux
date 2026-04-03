@@ -94,25 +94,50 @@ def get_nearest_industries(lat: float, lon: float, limit: int = 3) -> List[Dict]
     point_4326 = Point(lon, lat)
     point_2154 = gpd.GeoSeries([point_4326], crs="EPSG:4326").to_crs(epsg=2154).iloc[0]
 
-    # 2. Calculer les distances pour tous les sites
-    temp_gdf = gdf_ind.copy()
+    # 2. Exclure les géométries nulles/vides avant le calcul
+    temp_gdf = gdf_ind[gdf_ind.geometry.notna() & ~gdf_ind.geometry.is_empty].copy()
+    if temp_gdf.empty:
+        return []
+
     temp_gdf["distance_m"] = temp_gdf.geometry.distance(point_2154)
 
-    # 3. Trier et prendre les N premiers
-    nearest = temp_gdf.sort_values("distance_m").head(limit)
+    # 3. Garantir au moins 1 site de chaque type (ETAB + BASOL)
+    # puis compléter avec les plus proches restants jusqu'à `limit`
+    etab = temp_gdf[temp_gdf["type_risque"] == "Établissement Industriel"].sort_values("distance_m")
+    basol = temp_gdf[temp_gdf["type_risque"] == "Site Pollué (BASOL)"].sort_values("distance_m")
+
+    selected_idx = set()
+    candidates = []
+
+    # 1 nearest de chaque type en priorité
+    for groupe in (etab, basol):
+        if not groupe.empty:
+            row = groupe.iloc[0]
+            selected_idx.add(groupe.index[0])
+            candidates.append(groupe.head(1))
+
+    # Compléter avec les plus proches globaux non encore sélectionnés
+    reste = temp_gdf[~temp_gdf.index.isin(selected_idx)].sort_values("distance_m")
+    reste_needed = limit - len(candidates)
+    if reste_needed > 0 and not reste.empty:
+        candidates.append(reste.head(reste_needed))
+
+    nearest = pd.concat(candidates).sort_values("distance_m") if candidates else temp_gdf.head(0)
 
     # 4. Formater pour le JSON
     results = []
     for _, row in nearest.iterrows():
-        # Conversion de la géométrie Lambert 93 vers GPS 4326 pour le front
-        geom_4326 = gpd.GeoSeries([row.geometry], crs="EPSG:2154").to_crs(epsg=4326).iloc[0]
-        
-        results.append({
-            "nom": str(row.get("nom", "Inconnu")),
-            "type_risque": str(row.get("type_risque", "Non spécifié")),
-            "distance_m": round(float(row["distance_m"]), 1),
-            "lat": round(float(geom_4326.y), 6),
-            "lon": round(float(geom_4326.x), 6)
-        })
+        try:
+            centroid_2154 = row.geometry.centroid
+            centroid_4326 = gpd.GeoSeries([centroid_2154], crs="EPSG:2154").to_crs(epsg=4326).iloc[0]
+            results.append({
+                "nom": str(row.get("nom", "Inconnu")),
+                "type_risque": str(row.get("type_risque", "Non spécifié")),
+                "distance_m": round(float(row["distance_m"]), 1),
+                "lat": round(float(centroid_4326.y), 6),
+                "lon": round(float(centroid_4326.x), 6)
+            })
+        except Exception as e:
+            print(f"⚠️ Site ignoré (erreur conversion): {e}")
 
     return results
