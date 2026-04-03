@@ -39,13 +39,11 @@ def get_cell(cell_id: str):
     centroid = row.geometry.centroid
     nearest_refuges = get_nearest_refuges(centroid.y, centroid.x, limit=3)
 
-    # ---------- RECHERCHE DES SITES INDUSTRIELS À PROXIMITÉ (< 250m) ----------
-    # ---------- RECHERCHE DES 3 SITES INDUSTRIELS/POLLUÉS LES PLUS PROCHES ----------
-    import geopandas as gpd
-    from src.api.industries_loader import get_gdf_industries
+    # ---------- RECHERCHE DES 3 SITES INDUSTRIELS LES PLUS PROCHES ----------
+    from src.api.industries_loader import get_nearest_industries
     
-    gdf_ind = get_gdf_industries()
-    nearby_industrial_sites = []
+    # Calcul avec les données chargées dynamiquement (ri_etab... et ri_basol...)
+    nearby_industrial_sites = get_nearest_industries(centroid.y, centroid.x, limit=3)
     
     if not gdf_ind.empty:
         try:
@@ -89,6 +87,7 @@ def get_cell(cell_id: str):
     return {
         "cell_id": cell_id,
         "score": score,
+        "score_num": float(row.get("score_particulier", 50)),
         "cluster": {
             "id": cluster,
             "label": cluster_label
