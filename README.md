@@ -11,19 +11,120 @@ Hackathon Bordeaux Métropole — 30 mars au 3 avril 2026
 
 Chaque risque est traité séparément par les outils officiels, alors qu'ils se cumulent sur un même territoire. Un habitant de Cenon peut être simultanément en zone inondable, sur argile instable, et à 3 km d'une installation industrielle — sans le savoir.
 
-45% des Girondins citent les risques naturels comme préoccupation, mais se sentent moins bien informés sur les risques industriels. **Sur les 9 624 zones analysées de Bordeaux Métropole, 100% présentent au moins un risque naturel ou industriel non nul.**
+**Sur les 9 624 zones analysées de Bordeaux Métropole, 100% présentent au moins un risque naturel ou industriel non nul.**
 
-La Garonne a récemment débordé sur les quais de Bordeaux — preuve que le risque inondation n'est pas théorique.
+Résili-Score agrège 12 sources de données open data sur une grille de 9 624 cellules de 250m × 250m et traduit tout ça en une lettre (A à F) + un profil de risque lisible par n'importe qui.
 
-## Solution
+---
 
-Résili-Score est un outil citoyen : n'importe quel Girondin peut taper son adresse et comprendre en 30 secondes à quoi il est exposé.
+## Démarrage rapide
 
-Le site agrège 12 sources de données open data sur une grille de 9 624 cellules de 250m × 250m, croise les risques via K-Means et un score pondéré, et traduit tout ça en une lettre (A à E) + un profil de risque lisible par n'importe qui.
+```bash
+git clone <repo>
+cd Hackathon-Bordeaux
+```
 
-## Message au jury
+### 1. Données (première fois uniquement)
 
-On veut que n'importe quel Girondin puisse taper son adresse et comprendre en 30 secondes à quoi il est exposé.
+```bash
+cd ml_dir
+uv sync
+python download_data.py   # télécharge ~500 MB depuis data.gouv.fr / Géorisques
+```
+
+### 2. Pipeline ML (première fois, ou si les données changent)
+
+```bash
+python main.py            # features → kmeans → scoring → scores/scores.geojson
+```
+
+### 3. Lancer l'application
+
+```bash
+cd ..
+./start.sh all            # backend (port 9456) + frontend (port 8080)
+```
+
+Puis ouvrir **http://localhost:8080**.
+
+---
+
+## Commandes disponibles
+
+```bash
+./start.sh backend    # API FastAPI uniquement        → http://localhost:9456
+./start.sh frontend   # Serveur frontend uniquement   → http://localhost:8080
+./start.sh all        # Les deux en parallèle
+./start.sh pipeline   # Relancer le pipeline ML
+./start.sh download   # Re-télécharger les données sources
+```
+
+---
+
+## Architecture
+
+```
+Hackathon-Bordeaux/
+├── start.sh              # script de lancement
+│
+├── ml_dir/               # pipeline ML
+│   ├── download_data.py  # téléchargement des sources open data
+│   ├── main.py           # orchestrateur (features → kmeans → scoring)
+│   ├── config.py         # paramètres (charge .env)
+│   ├── .env.example      # template de configuration
+│   └── pipeline/
+│       ├── features.py   # feature engineering sur grille 250m
+│       ├── kmeans.py     # clustering KMeans
+│       └── scoring.py    # scores pondérés + explications SHAP
+│
+├── scores/
+│   └── scores.geojson    # output ML → lu par le backend
+│
+├── data/                 # données sources (gitignorées, voir download_data.py)
+│
+├── backend/              # API FastAPI
+│   └── src/api/
+│       ├── main.py       # app + CORS (configurer ALLOWED_ORIGINS en prod)
+│       ├── routes/       # /api/map  /api/cell/{id}  /api/address
+│       ├── data_loader.py
+│       ├── scoring.py
+│       ├── industries_loader.py
+│       └── poi_loader.py
+│
+└── frontend/             # carte interactive
+    ├── config.js         # URL du backend (dérivée automatiquement depuis window.location)
+    ├── app.js
+    ├── index.html
+    └── style.css
+```
+
+---
+
+## Configuration
+
+### Frontend — `frontend/config.js`
+
+L'URL du backend est dérivée automatiquement depuis le hostname du navigateur. En production, modifier :
+
+```js
+const API_BASE_URL = 'https://mon-backend.fr';
+```
+
+### Backend — variable d'environnement
+
+```bash
+ALLOWED_ORIGINS=https://mon-frontend.fr uvicorn src.api.main:app --port 9456
+```
+
+Par défaut le CORS est ouvert (`*`) pour le développement local.
+
+### ML — `ml_dir/.env`
+
+Copier `.env.example` → `.env` et ajuster les poids ou le nombre de clusters :
+
+```bash
+cp ml_dir/.env.example ml_dir/.env
+```
 
 ---
 
@@ -33,49 +134,10 @@ On veut que n'importe quel Girondin puisse taper son adresse et comprendre en 30
 |---|---|
 | Frontend | HTML/CSS/JS vanilla, MapLibre GL JS |
 | Backend | Python, FastAPI, GeoPandas, Shapely |
-| ML | K-Means (scikit-learn), SHAP, Ridge, MinMaxScaler |
-| API externe | Base Adresse Nationale (géocodage) |
+| ML | KMeans (scikit-learn), Ridge, SHAP, MinMaxScaler |
+| Géocodage | Base Adresse Nationale — api-adresse.data.gouv.fr |
+| Données | Bordeaux Métropole Open Data, Géorisques, INSEE — Licence Ouverte v2.0 |
 
-## Algorithme
+---
 
-1. **Pipeline de données** (`run.py`) — 11 features extraites par spatial join sur une grille 250m × 250m
-2. **Clustering** (`kmeans.ipynb`) — K-Means avec k optimal (score silhouette), 9 clusters avec labels sémantiques
-3. **Scoring** (`scoring.ipynb`) — deux scores 0–100 avec pondération expert + interactions entre features, explications générées par SHAP
-
-| Catégorie | Poids | Variables |
-|---|---|---|
-| Risques | 50% | Inondation, nappe phréatique, argile, ICU, PPRT, zones humides |
-| Capacités | 25% | Distance aux industries et sites pollués |
-| Résilience | 25% | Couverture végétale, capacité d'infiltration |
-
-Les poids sont arbitraires mais documentés et facilement ajustables.
-
-## Sources de données (12 sources)
-
-| Donnée | Source |
-|---|---|
-| Zonages inondation TRI 2020 | Géorisques |
-| Remontée de nappes | Géorisques |
-| Aléa retrait-gonflement argiles | DataHub Bordeaux Métropole |
-| Îlot de chaleur/fraîcheur | DataHub Bordeaux Métropole |
-| Zones PPRT | DataHub Bordeaux Métropole |
-| Sites pollués BASOL | DataHub Bordeaux Métropole |
-| Établissements polluants | DataHub Bordeaux Métropole |
-| Capacité d'infiltration | DataHub Bordeaux Métropole |
-| Zones boisées | DataHub Bordeaux Métropole |
-| Zones humides | DataHub Bordeaux Métropole |
-| Espaces verts | DataHub Bordeaux Métropole |
-| Population carroyage 200m | INSEE 2015 |
-
-## Lancer le projet
-
-```bash
-# Backend
-cd backend
-uv sync
-uvicorn src.api.main:app --reload --port 8000
-
-# Frontend
-cd frontend
-# Ouvrir index.html dans un navigateur
-```
+*Projet réalisé dans le cadre du défi [Prévention des risques à Bordeaux Métropole](https://defis.data.gouv.fr/defis/prevention-des-risques-a-bordeaux-metropole) — Open Data University / data.gouv.fr*

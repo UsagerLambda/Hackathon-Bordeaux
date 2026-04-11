@@ -9,17 +9,11 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point
 
-# Chemins pour les données industrielles
-# Chemins pour les données industrielles
-_BACKEND_DIR = Path(__file__).resolve().parents[2]
-_GEOJSON_ETAB_PATH = _BACKEND_DIR / "ri_etab_pol_p.geojson"
-_GEOJSON_BASOL_PATH = _BACKEND_DIR / "ri_basol_p.geojson"
+# Chemins vers les données sources téléchargées par le pipeline ML
+_DATA_DIR = Path(__file__).resolve().parents[3] / "data"
+_GEOJSON_ETAB_PATH = _DATA_DIR / "ri_etab_pol_p.geojson"
+_GEOJSON_BASOL_PATH = _DATA_DIR / "ri_basol_p.geojson"
 
-# Fallback si jamais les fichiers ont été copiés sur le Bureau
-if not _GEOJSON_ETAB_PATH.exists():
-    _GEOJSON_ETAB_PATH = Path("/Users/lucasscianna/Desktop/ri_etab_pol_p.geojson")
-if not _GEOJSON_BASOL_PATH.exists():
-    _GEOJSON_BASOL_PATH = Path("/Users/lucasscianna/Desktop/ri_basol_p.geojson")
 
 gdf_industries = None
 

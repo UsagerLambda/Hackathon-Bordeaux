@@ -11,36 +11,32 @@ let currentPoiRequestId = 0;
 // FONCTIONS UTILITAIRES
 // =====================
 
-function getLettre(score) {
-    if (score >= 76) return "F";
-    if (score >= 56) return "E";
-    if (score >= 41) return "D";
-    if (score >= 26) return "C";
-    if (score >= 18) return "B";
-    if (score >= 10) return "A";
-    return "F";
+// Source de vérité unique pour les niveaux de score
+const SCORE_LEVELS = [
+    { min: 76, lettre: 'F', couleur: '#4C0035', label: 'Critique extrême' },
+    { min: 56, lettre: 'E', couleur: '#7D0033', label: 'Très fragile' },
+    { min: 41, lettre: 'D', couleur: '#C74811', label: 'Fragile' },
+    { min: 26, lettre: 'C', couleur: '#dba339', label: 'Moyen' },
+    { min: 18, lettre: 'B', couleur: '#bbf534', label: 'Résilient' },
+    { min: 10, lettre: 'A', couleur: '#05852b', label: 'Très résilient' },
+];
+const SCORE_DEFAULT_COULEUR = '#8B0000';
+
+function getLevel(score) {
+    return SCORE_LEVELS.find(l => score >= l.min) || { lettre: 'F', couleur: SCORE_DEFAULT_COULEUR, label: 'Inconnu' };
 }
 
-function getCouleur(score) {
-    if (score >= 76) return "#4C0035";
-    if (score >= 56) return "#7D0033";
-    if (score >= 41) return "#C74811";
-    if (score >= 26) return "#dba339";
-    if (score >= 18) return "#bbf534";
-    if (score >= 10) return "#05852b";
-    return "#8B0000";
-}
-
+function getLettre(score) { return getLevel(score).lettre; }
+function getCouleur(score) { return getLevel(score).couleur; }
 function getDescriptionClasse(lettre) {
-    const descriptions = {
-        'F': 'Critique extrême',
-        'E': 'Très fragile',
-        'D': 'Fragile',
-        'C': 'Moyen',
-        'B': 'Résilient',
-        'A': 'Très résilient',
-    };
-    return descriptions[lettre] || 'Inconnu';
+    return (SCORE_LEVELS.find(l => l.lettre === lettre) || { label: 'Inconnu' }).label;
+}
+
+// Construit l'expression MapLibre step à partir de SCORE_LEVELS
+function buildColorStep() {
+    const step = ['step', ['get', 'score_particulier'], SCORE_DEFAULT_COULEUR];
+    [...SCORE_LEVELS].reverse().forEach(l => step.push(l.min, l.couleur));
+    return step;
 }
 
 // =====================
@@ -78,7 +74,7 @@ function initMap() {
         console.log('✅ Carte chargée');
 
         // Affiche l'overlay de chargement si besoin
-        fetch('http://127.0.0.1:9456/api/map')
+        fetch(`${API_BASE_URL}/api/map`)
             .then(response => {
                 if (!response.ok) throw new Error(`Erreur: ${response.status}`);
                 return response.json();
@@ -100,17 +96,7 @@ function initMap() {
                             'case',
                             ['boolean', ['feature-state', 'selected'], false],
                             '#3b82f6',
-                            [
-                                'step',
-                                ['get', 'score_particulier'],
-                                '#8B0000',
-                                10, '#05852b',
-                                18, '#bbf534',
-                                26, '#dba339',
-                                41, '#C74811',
-                                56, '#7D0033',
-                                76, '#4C0035'
-                            ]
+                            buildColorStep()
                         ],
                         'fill-opacity': 0.4
                     }
@@ -149,7 +135,7 @@ function initMap() {
 
                             const requestId = ++currentPoiRequestId;
                             const clickCenter = [e.lngLat.lng, e.lngLat.lat];
-                            fetch(`http://localhost:9456/api/cell/${props.cell_id}`)
+                            fetch(`${API_BASE_URL}/api/cell/${props.cell_id}`)
                                 .then(r => r.json())
                                 .then(data => {
                                     if (requestId === currentPoiRequestId) afficherPOI(data, clickCenter);
@@ -170,7 +156,7 @@ function initMap() {
                 })
                     .catch(err => {
                         console.error('❌ Erreur chargement backend:', err);
-                        alert('❌ Erreur: impossible de charger les données. Vérifiez que l\'API tourne sur http://localhost:9456');
+                        alert(`❌ Erreur: impossible de charger les données. Vérifiez que l'API tourne sur ${API_BASE_URL}`);
                     });
             });
 
@@ -335,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const searchTerm = document.getElementById('search-input').value.trim();
         if (!searchTerm) return;
 
-        fetch(`http://127.0.0.1:9456/api/address?q=${encodeURIComponent(searchTerm)}`)
+        fetch(`${API_BASE_URL}/api/address?q=${encodeURIComponent(searchTerm)}`)
             .then(response => {
                 if (!response.ok) throw new Error('Adresse introuvable');
                 return response.json();

@@ -24,9 +24,11 @@ build/
 # Notebooks
 *.ipynb
 
-# Lock files
-*.lock
-uv.lock
+# Lock files (uv.lock versionné pour la reproductibilité)
+package-lock.json
+
+# Environnement
+.env
 
 # OS
 .DS_Store

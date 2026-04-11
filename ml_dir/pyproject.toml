@@ -4,11 +4,15 @@ version = "0.1.0"
 description = "Resili-Score — pipeline de données géospatiales Bordeaux Métropole"
 requires-python = ">=3.11"
 dependencies = [
-    "httpx",
     "geopandas",
     "shapely",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "shap",
+    "python-dotenv",
     "jupyter",
-    "seaborn"
+    "seaborn",
 ]
 
 [project.optional-dependencies]

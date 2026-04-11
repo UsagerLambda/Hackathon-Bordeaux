@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Optional
 import geopandas as gpd
 
-# Chemin vers le fichier GeoJSON (à la racine du repo)
-_GEOJSON_PATH = Path(__file__).resolve().parents[2] / "scores.geojson"
+# Chemin vers le fichier GeoJSON généré par le pipeline ML
+_GEOJSON_PATH = Path(__file__).resolve().parents[3] / "scores" / "scores.geojson"
 
 # GeoDataFrame global – alimenté au démarrage par load_data()
 gdf: Optional[gpd.GeoDataFrame] = None

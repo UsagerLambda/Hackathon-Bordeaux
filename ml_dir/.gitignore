@@ -1,7 +1,9 @@
-*.lock
+.venv/
+__pycache__/
+*.pyc
 *.ipynb
-.venv
-__pycache__
+
+# Données (volumineuses — télécharger via download_data.py)
 *.geojson
 *.dbf
 *.shx
@@ -10,4 +12,9 @@ __pycache__
 *.qix
 *.csv
 *.cpg
+
+# Environnement local
+.env
+
+# OS
 .DS_Store

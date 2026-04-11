@@ -3,6 +3,7 @@ main.py – Point d'entrée de l'API FastAPI Résili-Score.
 Monte les routers, configure CORS, et charge les données au démarrage.
 """
 
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,11 +22,11 @@ async def lifespan(app: FastAPI):
     print("🚀 Démarrage de l'API Résili-Score...")
     gdf = load_data()
     compute_scores(gdf)
-    
+
     # Charger les données industrielles
     from src.api.industries_loader import load_industries
     load_industries()
-    
+
     print("🟢 API prête !")
 
     yield
@@ -46,11 +47,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS (ouvert pour le hackathon) ──────────────────────────────────────────
+# ── CORS ─────────────────────────────────────────────────────────────────────
+# Définir ALLOWED_ORIGINS en variable d'environnement pour restreindre en prod.
+# Exemple : ALLOWED_ORIGINS="https://mondomaine.fr,https://www.mondomaine.fr"
+# Par défaut : ouvert (*) pour le développement local.
+
+_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+ALLOWED_ORIGINS = _origins_env.split(",") if _origins_env else ["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -9,19 +9,15 @@ import httpx
 from shapely.geometry import Point
 
 from src.api.data_loader import get_gdf
+from src.api.industries_loader import get_nearest_industries
+from src.api.poi_loader import get_nearest_refuges
 from src.api.scoring import get_recommendations
+from src.api.utils import FEATURE_COLS, convert
 
 router = APIRouter(tags=["Adresse"])
 
 # URL de l'API Base Adresse Nationale
 _BAN_URL = "https://api-adresse.data.gouv.fr/search/"
-
-# Colonnes de features brutes
-_FEATURE_COLS = [
-    "flood_score", "nappe", "argile", "icu",
-    "in_pprt", "green_cover", "zone_humide", "water_infiltration",
-    "dist_industrie", "dist_sites_pol", "population",
-]
 
 
 @router.get("/address")
@@ -72,8 +68,6 @@ async def search_address(q: str = Query(..., description="Adresse à rechercher"
     else:
         row = match.iloc[0]
 
-    from src.api.poi_loader import get_nearest_refuges
-
     score = str(row["score"])
     cluster = int(row["cluster"])
     cluster_label = str(row.get("cluster_label", f"Cluster {cluster}"))
@@ -82,8 +76,6 @@ async def search_address(q: str = Query(..., description="Adresse à rechercher"
     # Calcul des refuges proches de l'adresse géocodée
     nearest_refuges = get_nearest_refuges(lat, lon, limit=3)
 
-    # ---------- RECHERCHE DES 3 SITES INDUSTRIELS LES PLUS PROCHES ----------
-    from src.api.industries_loader import get_nearest_industries
     nearby_industrial_sites = get_nearest_industries(lat, lon, limit=3)
 
     # Recommandations dynamiques + conseils du collègue
@@ -104,19 +96,10 @@ async def search_address(q: str = Query(..., description="Adresse à rechercher"
         },
         "population": int(row.get("population", 0)),
         "explication": str(row.get("explication_particulier", "")),
-        "features": {col: _convert(row[col]) for col in _FEATURE_COLS if col in row},
+        "features": {col: convert(row[col]) for col in FEATURE_COLS if col in row},
         "recommendations": recommendations,
         "nearest_refuges": nearest_refuges,
         "nearby_industrial_sites": nearby_industrial_sites,
     }
 
 
-def _convert(val):
-    """Convertit les types numpy en types Python natifs."""
-    import numpy as np
-
-    if isinstance(val, (np.integer,)):
-        return int(val)
-    if isinstance(val, (np.floating,)):
-        return float(val)
-    return val

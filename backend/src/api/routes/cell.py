@@ -6,16 +6,12 @@ Retourne les features, le score et les recommandations d'une cellule.
 from fastapi import APIRouter, HTTPException
 
 from src.api.data_loader import get_gdf
+from src.api.industries_loader import get_nearest_industries
+from src.api.poi_loader import get_nearest_refuges
 from src.api.scoring import get_recommendations
+from src.api.utils import FEATURE_COLS, convert
 
 router = APIRouter(tags=["Cellules"])
-
-# Colonnes de features brutes à exposer
-_FEATURE_COLS = [
-    "flood_score", "nappe", "argile", "icu",
-    "in_pprt", "green_cover", "zone_humide", "water_infiltration",
-    "dist_industrie", "dist_sites_pol", "population",
-]
 
 
 @router.get("/cell/{cell_id}")
@@ -38,9 +34,6 @@ def get_cell(cell_id: str):
     # Calcul du centroïde pour trouver les refuges proches
     centroid = row.geometry.centroid
     nearest_refuges = get_nearest_refuges(centroid.y, centroid.x, limit=3)
-
-    # ---------- RECHERCHE DES 3 SITES INDUSTRIELS LES PLUS PROCHES ----------
-    from src.api.industries_loader import get_nearest_industries
     nearby_industrial_sites = get_nearest_industries(centroid.y, centroid.x, limit=3)
 
     # Recommandations dynamiques + conseils du collègue
@@ -59,19 +52,8 @@ def get_cell(cell_id: str):
         },
         "population": int(row.get("population", 0)),
         "explication": str(row.get("explication_particulier", "")),
-        "features": {col: _convert(row[col]) for col in _FEATURE_COLS if col in row},
+        "features": {col: convert(row[col]) for col in FEATURE_COLS if col in row},
         "recommendations": recommendations,
         "nearest_refuges": nearest_refuges,
         "nearby_industrial_sites": nearby_industrial_sites,
     }
-
-
-def _convert(val):
-    """Convertit les types numpy en types Python natifs pour la sérialisation JSON."""
-    import numpy as np
-
-    if isinstance(val, (np.integer,)):
-        return int(val)
-    if isinstance(val, (np.floating,)):
-        return float(val)
-    return val
