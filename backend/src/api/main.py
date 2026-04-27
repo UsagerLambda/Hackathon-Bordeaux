@@ -5,8 +5,10 @@ Monte les routers, configure CORS, et charge les données au démarrage.
 
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.api.data_loader import load_data
 from src.api.scoring import compute_scores
@@ -70,9 +72,9 @@ app.include_router(address.router, prefix="/api")
 app.include_router(map.router, prefix="/api")
 
 
-# ── Route santé ──────────────────────────────────────────────────────────────
+# ── Frontend statique ────────────────────────────────────────────────────────
+# Monté en dernier pour ne pas masquer les routes /api/*
 
-@app.get("/", tags=["Santé"])
-def health():
-    """Health check."""
-    return {"status": "ok", "project": "Résili-Score"}
+_FRONTEND_DIR = Path(__file__).resolve().parents[3] / "frontend"
+if _FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIR), html=True), name="frontend")
