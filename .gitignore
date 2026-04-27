@@ -11,8 +11,11 @@ dist/
 build/
 
 # Data files (large)
-# scores/scores.geojson est versionné (nécessaire pour le déploiement du backend)
+# Fichiers nécessaires au backend en prod → versionnés
+# scores/scores.geojson, data/ri_etab_pol_p.geojson, data/ri_basol_p.geojson
 data/*.geojson
+!data/ri_etab_pol_p.geojson
+!data/ri_basol_p.geojson
 *.dbf
 *.shx
 *.shp
