@@ -1,0 +1,23 @@
+services:
+  # ── Backend FastAPI ────────────────────────────────────────────────────────
+  - type: web
+    name: resiliscore-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ALLOWED_ORIGINS
+        # Remplacer par l'URL exacte du frontend une fois connu (ou mettre * pour les tests)
+        value: "*"
+
+  # ── Frontend Static Site ───────────────────────────────────────────────────
+  - type: static
+    name: resiliscore-frontend
+    buildCommand: bash build.sh
+    staticPublishPath: frontend
+    envVars:
+      - key: API_BASE_URL
+        # Remplacer par l'URL du backend Render après son premier déploiement
+        # ex: https://resiliscore-backend.onrender.com
+        value: https://resiliscore-backend.onrender.com
